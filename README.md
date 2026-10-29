@@ -1,5 +1,9 @@
 # DriveLab aandrijvingen
 
+Elk labo heeft de tabbladen **Simulator** (of **Zelftest**) en **Voorbereiding**. De voorbereiding bevat theorie, formules met voorwaarden, 46 uitgewerkte vragen verdeeld over de labo's, een controlelijst en ruimte voor eigen antwoorden. Je notities worden alleen in deze browser bewaard en kunnen als tekstbestand worden gedownload. Bij wisselen tussen de twee tabbladen van hetzelfde labo blijft de simulator gemonteerd en blijven zijn instellingen behouden.
+
+Een voorbereiding rechtstreeks openen kan bijvoorbeeld via `#labo-8/voorbereiding`. Wanneer Voorbereiding actief is, openen de andere labo's in de zijbalk ook hun voorbereiding. Labo 4 blijft weggelaten. Voor sessies 10–12 is dit een eigen herhalingsblad: hun concrete opdrachten ontbreken in de cursusplanning.
+
 Interactieve Nederlandstalige voorbereiding van de labocursus aandrijvingen en energieomvormers. Acht rekenmodellen voor labo 1, 2, 3, 5, 6, 7, 8 en 9, aangevuld met zelftests voor sessies 10–12. Labo 4 is weggelaten.
 
 ## Gebruiken

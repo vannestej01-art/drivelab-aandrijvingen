@@ -2,7 +2,7 @@
 const $=s=>document.querySelector(s), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const models=[...(window.DriveElectronics||[]),...(window.DriveMachines||[])].sort((a,b)=>a.id-b.id), modelMap=new Map(models.map(x=>[x.id,x]));
 const names={1:'Bruggelijkrichters en meten',2:'Driefasige pulsgenerator',3:'Thyristorgelijkrichters',5:'Onafhankelijk bekrachtigde DC-motor',6:'IGBT-chopper en inverter',7:'Asynchrone motor',8:'Frequentiegestuurde aandrijving',9:'Dubbelgevoede generator',10:'Oefenlabo',11:'Individuele sessie 1',12:'Individuele sessie 2'};
-const ids=[1,2,3,5,6,7,8,9,10,11,12], key='drivelab-all-v1';let state={},active=null,charts=[],output=null,params={},frame=0,progress=1,playing=false,lastTime=0,teacherPanel=null,comparison=null,renderedParams={},pendingBefore=null;
+const ids=[1,2,3,5,6,7,8,9,10,11,12], key='drivelab-all-v1';let labView='simulator';let state={},active=null,charts=[],output=null,params={},frame=0,progress=1,playing=false,lastTime=0,teacherPanel=null,comparison=null,renderedParams={},pendingBefore=null;
 try{state=JSON.parse(localStorage.getItem(key)||'{}');}catch{}if(!state||typeof state!=='object')state={};
 function persist(){try{localStorage.setItem(key,JSON.stringify(state));return true;}catch{toast('Opslaan in deze browser lukt niet. Exporteer je gegevens om ze te bewaren.');return false;}}
 function toast(s){$('#toast').textContent=s;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,3800);}
@@ -11,7 +11,7 @@ function defaults(m){return Object.fromEntries(m.controls.map(c=>[c.key,c.value]
 function labState(id){return state[id]||(state[id]={});}
 function destroy(){pendingBefore=null;teacherPanel=null;comparison=null;clearTimeout(renderModel.timer);cancelAnimationFrame(frame);playing=false;charts.forEach(c=>c.destroy());charts=[];}
 function heading(title,subtitle,tag='BEREKENDE SIMULATIE'){return `<div class="page-heading"><div><div class="eyebrow">VIRTUEEL LABORATORIUM</div><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div><span class="tag">${esc(tag)}</span></div>`;}
-function navigation(){ $('#lab-nav').innerHTML=ids.map(id=>`<a class="lab-link${active===id?' active':''}" href="#labo-${id}"${active===id?' aria-current="page"':''}><b>${String(id).padStart(2,'0')}</b><span>${esc(names[id])}${id>=10?'<small>Zelf oefenen</small>':''}</span></a>`).join('');}
+function navigation(){ $('#lab-nav').innerHTML=ids.map(id=>`<a class="lab-link${active===id?' active':''}" href="#labo-${id}${labView==='voorbereiding'?'/voorbereiding':''}"${active===id?' aria-current="page"':''}><b>${String(id).padStart(2,'0')}</b><span>${esc(names[id])}${id>=10?'<small>Zelf oefenen</small>':''}</span></a>`).join('');}
 function overview(){
  $('#breadcrumb').textContent='Alle labo’s';$('#workspace').innerHTML=`<section class="hero"><div><div class="eyebrow">VAN GOLFVORM TOT AANDRIJVING</div><h1>Je volledige labocursus, één werkruimte.</h1><p>Verander een instelling, onderzoek de berekende grafieken en verklaar zelf het resultaat. Kies je labo om te beginnen.</p><a class="primary" style="display:inline-block;padding:9px 15px;border-radius:7px" href="#labo-8">Verder met labo 8 →</a></div><div class="hero-orbit" aria-hidden="true"><span>∿<small>NET</small></span>→<span>▥<small>OMVORMER</small></span>→<span>⟳<small>MACHINE</small></span></div></section><div class="section-row"><h2>Laboratoria</h2><span class="tag">8 simulaties · 3 oefensessies</span></div><div class="catalogue">${ids.map(id=>`<a class="lab-card" href="#labo-${id}"><div class="number">LABO ${String(id).padStart(2,'0')}</div><h2>${esc(names[id])}</h2><p>${esc(id===8?'Dynamiek, vier kwadranten, belastingslijnen en traagheidsmoment.':modelMap.get(id)?.subtitle||'Zelftoets met feedback als voorbereiding op de individuele sessie.')}</p><div class="card-foot"><span>${id>=10?'Oefenvragen met uitleg':'Instellingen · grafieken · export'}</span><b>↗</b></div></a>`).join('')}</div><div class="note" style="margin-top:20px">Bron: de aangeleverde cursus, labo 1–9. Labo 4 is op jouw verzoek weggelaten. De planning noemt ook sessies 10–12; daarvoor zijn eigen oefenvragen toegevoegd, omdat de concrete individuele opdrachten niet in de cursus staan.</div>`;
 }
@@ -29,7 +29,7 @@ function renderModel(m,before=null){
  for(const id of ['prediction','reason'])$('#'+id).onchange=()=>{saved[id]=$('#'+id).value;persist();};
  $('#export-notes').onclick=()=>downloadJSON({lab:m.id,parameters:params,prediction:$('#prediction').value,explanation:$('#reason').value},`DriveLab_labo_${m.id}_notities.json`);
  $('#save-run').onclick=()=>{saved.runs=saved.runs||[];saved.runs.push({label:`Instelling ${saved.runs.length+1}`,date:new Date().toISOString(),params:{...params}});if(saved.runs.length>6)saved.runs.shift();persist();renderSaved(m);};
- teacherPanel=DriveTeacherUI.mount($('#teacher-panel'));$('#auto-before').checked=saved.overlay!==false;$('#auto-before').onchange=()=>{saved.overlay=$('#auto-before').checked;persist();drawCharts();};updateModel(m,before);renderSaved(m);
+ teacherPanel=DriveTeacherUI.mount($('#teacher-panel'));$('#auto-before').checked=saved.overlay!==false;$('#auto-before').onchange=()=>{saved.overlay=$('#auto-before').checked;persist();drawCharts();};updateModel(m,before);renderSaved(m);installLabTabs();
 }
 
 function metricValue(r,name){return r.metrics.find(x=>x.label===name)?.value;}
@@ -81,7 +81,7 @@ function downloadJSON(obj,name){LabDownload(new Blob([JSON.stringify(obj,null,2)
 function exportCSV(m,p,o){const rows=[['DriveLab','Labo '+m.id,m.title],['Model','Berekende onderwijsgegevens'],...Object.entries(p).map(([k,v])=>['Parameter',k,v]),['Grafiek','Reeks','X','Y','X-as','Y-as']];for(const c of o.charts)for(const s of c.series)for(const pt of s.points)rows.push([c.title,s.name,pt.x,pt.y,c.xLabel,c.yLabel]);const csv='\uFEFF'+rows.map(r=>r.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(';')).join('\r\n');LabDownload(new Blob([csv],{type:'text/csv;charset=utf-8'}),`DriveLab_labo_${m.id}.csv`);}
 function lab8(){
  $('#workspace').innerHTML=heading('Labo 8 · Frequentiegestuurde aandrijvingen','De volledige bestaande simulator: dynamiek, belastingskarakteristieken, traagheid en oefeningen.')+`<div class="section-row"><span class="source-note" style="margin:0">Cursus p. 56–58 · Leroy-Somer / ApILE</span><a class="primary" style="border-radius:7px;padding:8px 12px" href="labo8/index.html" target="_blank" rel="noopener">Open op volledig scherm ↗</a><button id="expand-lab8">Meer hoogte</button></div><iframe id="lab8-frame" class="lab8-frame" title="Volledige interactieve simulator labo 8" src="labo8/index.html"></iframe>`;
- $('#expand-lab8').onclick=()=>{$('#lab8-frame').style.height=($('#lab8-frame').clientHeight+500)+'px';};
+ $('#expand-lab8').onclick=()=>{$('#lab8-frame').style.height=($('#lab8-frame').clientHeight+500)+'px';};installLabTabs();
 }
 function practice(id){const d=window.DriveExercises?.[id];if(!d){$('#workspace').innerHTML=heading('Oefensessie','De oefenvragen zijn niet beschikbaar.');return;}const saved=labState(id);saved.answers=saved.answers||{};
  $('#workspace').innerHTML=heading(`Labo ${id} · ${d.title}`,d.description,'ZELF OEFENEN')+`<div class="note">${esc(d.source)}</div><section id="quiz-teacher"></section><section class="card"><div class="section-row"><h2>Voorspel en controleer</h2><span id="score" class="score"></span><button id="check-all" class="primary">Controleer antwoorden</button><button id="clear-quiz">Opnieuw oefenen</button><button id="quiz-export">Voortgang downloaden</button></div>${d.questions.map((q,i)=>`<div class="practice-question"><h3>${i+1}. ${esc(q.prompt)}</h3>${q.options.map((o,j)=>`<label class="choice"><input type="radio" name="q${i}" value="${j}"${saved.answers[i]===j?' checked':''}><span>${esc(o)}</span></label>`).join('')}<div class="answer" id="answer-${i}" hidden></div></div>`).join('')}</section>`;
@@ -90,8 +90,38 @@ function practice(id){const d=window.DriveExercises?.[id];if(!d){$('#workspace')
  teacherPanel.update({labId:id,oldParams:{},newParams:{},oldResult:quizMetrics(),newResult:quizMetrics(),controls:[],meta:{kind:'exercise',summary:'Dit is een zelftoets. Een antwoord selecteren verandert geen motor of elektrisch circuit. Controleer je antwoord om de fysische modelverklaring te bekijken.'}});
  $('#workspace').onchange=e=>{if(!/^q\d+$/.test(e.target.name||''))return;const q=Number(e.target.name.slice(1)),old=saved.answers[q],previous=quizMetrics();saved.answers[q]=Number(e.target.value);persist();teacherPanel.update({labId:id,oldParams:{answer:old==null?'Nog niet gekozen':d.questions[q].options[old]},newParams:{answer:d.questions[q].options[saved.answers[q]]},oldResult:previous,newResult:quizMetrics(),controls:[{key:'answer',label:'Antwoord op vraag '+(q+1)}],meta:{kind:'exercise',summary:'Je hebt een antwoord geselecteerd. Klik op Controleer antwoorden voor de fysische redenering. Er worden hierdoor geen simulatiewaarden veranderd.'}});};
  $('#check-all').onclick=()=>{let n=0;d.questions.forEach((q,i)=>{const val=saved.answers[i],a=$('#answer-'+i),correct=val===q.answer;n+=correct?1:0;a.hidden=false;a.className='answer'+(correct?'':' wrong');a.textContent=(val==null?'Nog niet beantwoord. ':correct?'Juist. ':'Bekijk je redenering. ')+q.explanation;});$('#score').textContent=`${n} / ${d.questions.length} juist`;teacherPanel.report('Zelftoets: '+n+' van '+d.questions.length+' antwoorden juist. '+d.questions.map((q,i)=>'Vraag '+(i+1)+': '+q.explanation).join(' '));};
- $('#clear-quiz').onclick=()=>{saved.answers={};persist();practice(id);};$('#quiz-export').onclick=()=>downloadJSON({session:id,answers:saved.answers,questions:d.questions.map(q=>q.prompt)},`DriveLab_oefensessie_${id}.json`);
+ $('#clear-quiz').onclick=()=>{saved.answers={};persist();practice(id);};$('#quiz-export').onclick=()=>downloadJSON({session:id,answers:saved.answers,questions:d.questions.map(q=>q.prompt)},`DriveLab_oefensessie_${id}.json`);installLabTabs();
 }
-function route(){destroy();const match=location.hash.match(/^#labo-(\d+)$/);active=match&&ids.includes(+match[1])?+match[1]:null;navigation();$('#breadcrumb').textContent=active?`Labo ${active}`:'Alle labo’s';if(active===null)overview();else if(active===8)lab8();else if(active>=10)practice(active);else if(modelMap.has(active))renderModel(modelMap.get(active));else $('#workspace').innerHTML=heading('Model niet beschikbaar','Controleer of alle bestanden uit de projectmap aanwezig zijn.');document.title=active?`DriveLab · Labo ${active}`:'DriveLab · Alle labo’s';window.scrollTo({top:0});}
+
+function showLabView(){
+ const sim=$('#lab-simulator'),prep=$('#lab-preparation');if(!sim||!prep)return;
+ sim.hidden=labView==='voorbereiding';prep.hidden=labView!=='voorbereiding';
+ if(labView==='voorbereiding'&&!prep.dataset.ready){DrivePreparations.mount(prep,active);prep.dataset.ready='1';}
+ document.querySelectorAll('[data-lab-view]').forEach(a=>{const selected=a.dataset.labView===labView;a.setAttribute('aria-selected',String(selected));a.tabIndex=selected?0:-1;});
+ $('#breadcrumb').textContent=`Labo ${active}${labView==='voorbereiding'?' / Voorbereiding':''}`;
+ const tag=$('.page-heading .tag'),subtitle=$('.page-heading p');
+ if(tag){tag.dataset.simLabel=tag.dataset.simLabel||tag.textContent;tag.textContent=labView==='voorbereiding'?'VOORBEREIDING':tag.dataset.simLabel;}
+ if(subtitle){subtitle.dataset.simText=subtitle.dataset.simText||subtitle.textContent;subtitle.textContent=labView==='voorbereiding'?'Theorie, formules en voorbereidende vragen bij dit labo.':subtitle.dataset.simText;}
+ document.title=`DriveLab · Labo ${active}${labView==='voorbereiding'?' · Voorbereiding':''}`;
+ navigation();if(labView==='simulator')requestAnimationFrame(()=>charts.forEach(c=>c.draw()));
+}
+function installLabTabs(){
+ if(!active)return;if($('#lab-tabs')){showLabView();return;}
+ const workspace=$('#workspace'),header=workspace.querySelector('.page-heading');if(!header)return;
+ const sim=document.createElement('div');sim.id='lab-simulator';sim.setAttribute('role','tabpanel');sim.setAttribute('aria-labelledby','tab-simulator');
+ for(const child of [...workspace.childNodes])if(child!==header)sim.append(child);
+ const nav=document.createElement('nav');nav.id='lab-tabs';nav.className='lab-subtabs';nav.setAttribute('role','tablist');nav.setAttribute('aria-label','Werkruimte labo '+active);
+ nav.innerHTML=`<a id="tab-simulator" class="lab-subtab" role="tab" data-lab-view="simulator" aria-controls="lab-simulator" href="#labo-${active}">${active>=10?'Zelftest':'Simulator'}</a><a id="tab-preparation" class="lab-subtab" role="tab" data-lab-view="voorbereiding" aria-controls="lab-preparation" href="#labo-${active}/voorbereiding">Voorbereiding</a>`;
+ nav.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const links=[...nav.querySelectorAll('[role=tab]')],i=links.indexOf(document.activeElement),next=e.key==='Home'?0:e.key==='End'?1:(i+(e.key==='ArrowRight'?1:-1)+2)%2;links[next].focus();links[next].click();};
+ const prep=document.createElement('section');prep.id='lab-preparation';prep.className='preparation-view';prep.setAttribute('role','tabpanel');prep.setAttribute('aria-labelledby','tab-preparation');prep.hidden=true;
+ workspace.append(nav,sim,prep);showLabView();
+}
+function route(){
+ const match=location.hash.match(/^#labo-(\d+)(?:\/(voorbereiding))?$/),next=match&&ids.includes(+match[1])?+match[1]:null,view=match?.[2]==='voorbereiding'?'voorbereiding':'simulator';
+ if(next!==null&&next===active&&$('#lab-tabs')){labView=view;showLabView();window.scrollTo({top:0});return;}
+ destroy();active=next;labView=view;navigation();$('#breadcrumb').textContent=active?`Labo ${active}`:'Alle labo’s';
+ if(active===null)overview();else if(active===8)lab8();else if(active>=10)practice(active);else if(modelMap.has(active))renderModel(modelMap.get(active));else $('#workspace').innerHTML=heading('Model niet beschikbaar','Controleer of alle bestanden uit de projectmap aanwezig zijn.');
+ if(active!==null)installLabTabs();else document.title='DriveLab · Alle labo’s';window.scrollTo({top:0});
+}
 window.addEventListener('hashchange',route);route();
 })();
