@@ -21,3 +21,14 @@ Deze map is voorbereid voor GitHub Pages zonder bouwstap. Publiceer de hoofdmap 
 - `labo8/`: volledige simulator voor frequentiegestuurde aandrijvingen
 
 Geen persoonlijke documenten of de oorspronkelijke cursus-PDF opgenomen. Zie de theorie en bronverwijzingen in de website en de handleiding.
+
+
+## Interactieve verklaringen
+
+Bij een parameterwijziging verschijnt **Wat gebeurt er als ik dit verander?** met oude en nieuwe instellingen, werkelijk berekende modeluitkomsten, een fysische verklaring en een voorspelling voor het echte labo. Kies Eenvoudige uitleg of Technische uitleg en open Waarom gebeurt dit. De kopieerknop geeft een tekst die expliciet over gesimuleerde resultaten gaat.
+
+Bij de nieuwe stationaire labo's worden de vorige curves automatisch gestreept naast de nieuwe curves getoond, voor zover de assen overeenkomen. Het gekozen motor-/generatorpunt krijgt een marker. Identieke referentiecurves blijven herkenbaar. Hover toont meetpunten en uitleg over hun betekenis.
+
+Labo 8 heeft een venster op elk van zijn vier tabbladen. De voor/na-proeven lopen vanaf hun eigen ingestelde beginconditie; de live simulatie behoudt haar eigen doorlopende mechanische toestand. De elektrische waarden zijn vereenvoudigde schattingen. Een frequentieconsigne regelt het statordraaiveld en laat de rotorsnelheid afhangen van slip en last; de bestaande toerentalregeling blijft beschikbaar. Maximale frequentie, V/f versus vaste spanning en motorreferenties werken door in de numerieke berekening. De mechanische koppeling blijft star; er wordt geen elastische koppeling of temperatuurmodel verzonnen.
+
+De uitleg werkt lokaal met geprogrammeerde regels en modelgegevens. Er worden geen AI-diensten aangeroepen. `assets/teacher.js` bevat de regels; `assets/teacher-ui.js` en `assets/teacher.css` verzorgen het venster. Testen: `node --test tests/*.test.cjs labo8/tests/model.test.cjs`.
